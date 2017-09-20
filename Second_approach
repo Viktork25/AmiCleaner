@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import csv
+import boto
+import datetime
+from collections import Counter
+
+
+from boto.ec2 import connect_to_region
+ec2_connection = connect_to_region("$region", profile_name="default")
+images = ec2_connection.get_all_images(Owners="$ownername")
+print('Get {} Amis'.format(len(images)))
+
+'''
+Some Steps to search images per name and values
+identifies = ec2_connection.describe_instances( Filters=[{'Name': 'tag-key', 'Values': ['ami-2', 'ami-1']}]).get('Reservations',[])
+'''
+
+ami_creation_time = Counter()
+
+for image in images:
+	print image.name
+	create_time_dt_object = datetime.strptime(image.creationDate, '%Y-%m-%dT%H:%M:%S.%fz')
+	epoch_seconds = int(time.mktime(create_time_dt_object.timetuple()))
+	ami_creation_time[image.id] = epoch_seconds
+
+#Redirect the output to a txt file
+for i in sorted(ami_creation_time.items(), key=lambda pair: pair[1]):
+	with open('C:\Users\VK81864\Documents\out.txt', 'w') as j:
+		print i
+		j.write(i)
+
+
+#Remove the creation date column
+lines=[]
+with open('C:\Users\VK81864\Documents\out.txt', 'r') as f:
+	with open('C:\Users\VK81864\Documents\pout.txt', 'w') as g:
+		writer=csv.writer(g)
+		for row in csv.reader(f):
+			writer.writerow(row[:-1])
+
+#Remove the first 3 lines
+with open('C:\Users\VK81864\Documents\pout.txt', 'r') as inf:
+	lines = inf.readlines()
+with open('C:\Users\VK81864\Documents\zout.txt', 'w') as outf:
+	outf.writelines(''.join(lines[3:]))
+
+
+#Remove specials '(u'' characters and deregister the amis
+lst = open('C:\Users\VK81864\Documents\zout.txt', 'r')
+for i in lst:
+	a = re.sub(r'\(\u','',i).replace('\'', '')
+	print a
+	a.deregister(dry_run=True, delete_snapshot=False)
+
+
+		
